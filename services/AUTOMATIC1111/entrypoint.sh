@@ -82,4 +82,6 @@ if [ -f "/data/config/auto/startup.sh" ]; then
   popd
 fi
 
+git config --global --add safe.directory '*'
+
 exec "$@"
