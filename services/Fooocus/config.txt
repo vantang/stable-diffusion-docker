@@ -1,0 +1,12 @@
+{
+    "path_checkpoints": "/data/models/Stable-diffusion",
+    "path_loras": "/data/models/Lora",
+    "path_embeddings": "/data/embeddings",
+    "path_vae_approx": "/data/models/VAE-approx",
+    "path_upscale_models": "/data/models/upscale_models",
+    "path_inpaint": "/data/models/inpaint",
+    "path_controlnet": "/data/models/ControlNet",
+    "path_clip_vision": "/data/models/clip_vision",
+    "path_fooocus_expansion": "/data/models/prompt_expansion/fooocus_expansion",
+    "path_outputs": "/output/Fooocus"
+}

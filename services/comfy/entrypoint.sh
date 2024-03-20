@@ -28,4 +28,6 @@ if [ -f "/data/config/comfy/startup.sh" ]; then
   popd
 fi
 
+git config --global --add safe.directory '*'
+
 exec "$@"

@@ -13,26 +13,43 @@ RUN . /clone.sh BLIP https://github.com/salesforce/BLIP.git 48211a1594f1321b00f1
 RUN . /clone.sh k-diffusion https://github.com/crowsonkb/k-diffusion.git ab527a9a6d347f364e3d185ba6d714e22d80cb3c
 RUN . /clone.sh clip-interrogator https://github.com/pharmapsychotic/clip-interrogator 2cf03aaf6e704197fd0dae7c7f96aa59cf1b11c9
 RUN . /clone.sh generative-models https://github.com/Stability-AI/generative-models 45c443b316737a4ab6e40413d7794a7f5657c19f
+RUN . /clone.sh stable-diffusion-webui-assets https://github.com/AUTOMATIC1111/stable-diffusion-webui-assets 6f7db241d2f8ba7457bac5ca9753331f0c266917
 
-
-FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.2.0-cuda11.8-cudnn8-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive PIP_PREFER_BINARY=1
 
 RUN --mount=type=cache,target=/var/cache/apt \
   apt-get update && \
   # we need those
-  apt-get install -y fonts-dejavu-core rsync git jq moreutils aria2 \
+  apt-get install -y fonts-dejavu-core rsync git jq moreutils aria2 libsox-dev \
   # extensions needs those
-  ffmpeg libglfw3-dev libgles2-mesa-dev pkg-config libcairo2 libcairo2-dev build-essential
+  software-properties-common libglfw3-dev libgles2-mesa-dev pkg-config libcairo2 libcairo2-dev build-essential
 
+RUN add-apt-repository ppa:ubuntuhandbook1/ffmpeg6 -y
+
+RUN apt-get install -y ffmpeg
+
+RUN conda config --add channels conda-forge
+
+RUN conda install conda-forge::ffmpeg -y
 
 WORKDIR /
 RUN --mount=type=cache,target=/root/.cache/pip \
   git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git && \
   cd stable-diffusion-webui && \
-  git reset --hard cf2772fab0af5573da775e7437e6acdca424f26e && \
-  pip install -r requirements_versions.txt
+  #git reset --hard cf2772fab0af5573da775e7437e6acdca424f26e && \
+  pip install -r requirements_versions.txt \
+  pip install setuptools==67.8.0 \
+  pip install modelscope av diffusers nvitop \
+  pip install insightface==0.7.3 onnx onnxruntime imageio-ffmpeg \
+  pip install onnxruntime-gpu
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+  pip install tensorflow[and-cuda]==2.14 --extra-index-url https://pypi.nvidia.com
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+  pip install xformers --index-url https://download.pytorch.org/whl/cu118
 
 
 ENV ROOT=/stable-diffusion-webui
@@ -43,7 +60,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   pip install -r ${ROOT}/repositories/CodeFormer/requirements.txt
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-  pip install pyngrok xformers==0.0.23.post1 \
+  pip install pyngrok \
   git+https://github.com/TencentARC/GFPGAN.git@8d2447a2d918f8eba5a4a01463fd48e45126a379 \
   git+https://github.com/openai/CLIP.git@d50d76daa670286dd6cacf3bcd80b5e4823fc8e1 \
   git+https://github.com/mlfoundations/open_clip.git@v2.20.0
@@ -54,6 +71,16 @@ RUN apt-get -y install libgoogle-perftools-dev && apt-get clean
 ENV LD_PRELOAD=libtcmalloc.so
 
 COPY . /docker
+
+#someone who want to install TensorRT Lib can reference these code blow
+RUN \
+  tar -zxvf /docker/TensorRT-8.6.1.6.Linux.x86_64-gnu.cuda-11.8.tar.gz -C /docker
+
+RUN \
+  rm /docker/TensorRT-8.6.1.6.Linux.x86_64-gnu.cuda-11.8.tar.gz
+
+ENV LD_LIBRARY_PATH=/docker/TensorRT-8.6.1.6/lib:$LD_LIBRARY_PATH
+ENV LIBRARY_PATH=/docker/TensorRT-8.6.1.6/lib:$LIBRARY_PATH
 
 RUN \
   # mv ${ROOT}/style.css ${ROOT}/user.css && \
