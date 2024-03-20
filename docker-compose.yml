@@ -4,8 +4,8 @@ x-base_service: &base_service
     ports:
       - "${WEBUI_PORT:-7860}:7860"
     volumes:
-      - &v1 ./data:/data
-      - &v2 ./output:/output
+      - &v1 "${DATA_PATH:-./data}:/data"
+      - &v2 "${OUTPUT_PATH:-./output}:/output"
     stop_signal: SIGKILL
     tty: true
     deploy:
@@ -16,7 +16,7 @@ x-base_service: &base_service
                 device_ids: ['0']
                 capabilities: [compute, utility]
 
-name: webui-docker
+name: stable-diffusion-docker
 
 services:
   download:
@@ -31,7 +31,7 @@ services:
     build: ./services/AUTOMATIC1111
     image: sd-auto:72
     environment:
-      - CLI_ARGS=--allow-code --medvram --xformers --enable-insecure-extension-access --api
+      - CLI_ARGS=--allow-code --xformers --enable-insecure-extension-access --api
 
   auto-cpu:
     <<: *automatic
@@ -60,7 +60,7 @@ services:
     <<: *base_service
     profiles: ["comfy"]
     build: ./services/comfy/
-    image: sd-comfy:6
+    image: sd-comfy:1958
     environment:
       - CLI_ARGS=
 
@@ -71,3 +71,59 @@ services:
     deploy: {}
     environment:
       - CLI_ARGS=--cpu
+
+
+# Testing Area Below
+  myauto:
+    <<: *automatic
+    profiles: ["myauto"]
+    environment:
+      - CLI_ARGS=--api --xformers --no-half-vae --opt-sub-quad-attention --upcast-sampling --allow-code --enable-insecure-extension-access
+
+  mycomfy:
+    <<: *comfy
+    profiles: ["mycomfy"]
+    volumes:
+      - *v1
+      - *v2
+      - ./data/config/comfy/custom_nodes:/stable-diffusion/custom_nodes
+      - ./data/config/comfy/models:/stable-diffusion/models
+      - ./data/config/comfy/my_workflows:/stable-diffusion/my_workflows
+    environment:
+      - CLI_ARGS=--multi-user
+      
+  mylorascripts:
+    <<: *base_service
+    profiles: ["mylorascripts"]
+    build: ./services/lora-scripts
+    image: lora-scripts:183
+    environment:
+      - CLI_ARGS=
+
+  myfooocus: &myfooocus
+    <<: *base_service
+    profiles: ["myfooocus"]
+    build: ./services/Fooocus
+    image: fooocus:21
+    environment:
+      - CLI_ARGS=
+
+  myfooocus-animate:
+    <<: *myfooocus
+    profiles: ["myfooocus-animate"]
+    environment:
+      - CLI_ARGS=--preset anime
+
+  myfooocus-realistic:
+    <<: *myfooocus
+    profiles: ["myfooocus-realistic"]
+    environment:
+      - CLI_ARGS=--preset realistic
+
+  myforge:
+    <<: *base_service
+    profiles: ["myforge"]
+    build: ./services/forge
+    image: sd-forge:17
+    environment:
+      - CLI_ARGS=--allow-code --xformers --enable-insecure-extension-access --api
